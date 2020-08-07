@@ -14,3 +14,5 @@ The electronics were adapted from the original circuit diagram so that they are 
 ![Scope-O-Matic Euro Rack](pictures/20200807_170215.jpg)
 
 ![Scope-O-Matic Euro Rack](pictures/20200807_165817.jpg)
+
+In this video you can see 2 oscilloscopes in action: https://www.youtube.com/watch?v=wOnTNtAUl_A
