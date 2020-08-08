@@ -16,3 +16,5 @@ The electronics were adapted from the original circuit diagram so that they are 
 ![Scope-O-Matic Euro Rack](pictures/20200807_165817.jpg)
 
 In this video you can see 2 oscilloscopes in action: https://www.youtube.com/watch?v=wOnTNtAUl_A
+
+For a more elaborate description of the build, have a look at this thread: https://lookmumnocomputer.discourse.group/t/scope-o-matic-an-arduino-nano-based-oscilloscope-in-euro-rack-format/1565
