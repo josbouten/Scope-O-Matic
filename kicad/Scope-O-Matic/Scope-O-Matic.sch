@@ -6,7 +6,7 @@ encoding utf-8
 Sheet 1 1
 Title "Scope-O-Matic, an Arduino Nano based Oscilloscope"
 Date "2020-08-07"
-Rev "0.1"
+Rev "0.2"
 Comp "Based on http://radiopench.blog96.fc2.com/blog-entry-997.html "
 Comment1 "Modified by Zaphod B for Euro Rack"
 Comment2 "Tested!"
@@ -514,19 +514,6 @@ Wire Wire Line
 	3750 2750 3750 3550
 Wire Wire Line
 	3750 3550 3450 3550
-$Comp
-L power:+5V #PWR011
-U 1 1 5F2DB1C6
-P 4050 3400
-F 0 "#PWR011" H 4050 3250 50  0001 C CNN
-F 1 "+5V" H 4065 3573 50  0000 C CNN
-F 2 "" H 4050 3400 50  0001 C CNN
-F 3 "" H 4050 3400 50  0001 C CNN
-	1    4050 3400
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	4050 3400 4050 3650
 Wire Wire Line
 	4050 3650 3450 3650
 $Comp
@@ -544,4 +531,10 @@ Wire Wire Line
 	4050 3900 4050 3750
 Wire Wire Line
 	4050 3750 3450 3750
+Wire Wire Line
+	4700 1250 4700 1000
+Wire Wire Line
+	4700 1000 4050 1000
+Wire Wire Line
+	4050 1000 4050 3650
 $EndSCHEMATC
