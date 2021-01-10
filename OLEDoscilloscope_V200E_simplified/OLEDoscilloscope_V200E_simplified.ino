@@ -12,6 +12,7 @@
     - does not show the duty cycle,
     - has no ticks on the x-axis,
     - uses the full width of the display to show the signal.
+
 */
 
 #include <Wire.h>
@@ -19,7 +20,7 @@
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
 
-// Note: if you define SIMPLIDIED, then the code will oscilloscope display 
+// Note: if you define SIMPLIFIED, then the code
 // will show a simplified version of the original content.
 // This is meant to display the signal only for visual inspection of
 // its form, not for measurement purposes.
