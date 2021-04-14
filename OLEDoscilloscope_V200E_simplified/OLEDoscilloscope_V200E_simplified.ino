@@ -531,13 +531,12 @@ void freqDuty() {                               // Detect frequency and duty cyc
   int p2Count = 0;                              // High time count
 
   boolean a0Detected = false;
-//  boolean b0Detected = false;
-  boolean posiSerch = true;                      // True when searching posi edge
+  boolean posiSearch = true;                      // True when searching posi edge
 
   swingCenter = (3 * (dataMin + dataMax)) / 2;   // Calculate wave center value
 
   for (int i = 1; i < REC_LENG - 2; i++) {       // Scan all over the buffer
-    if (posiSerch == true) {   // posi slope (frequency search)
+    if (posiSearch == true) {   // Positive slope (frequency search)
       if ((sum3(i) <= swingCenter) && (sum3(i + 1) > swingCenter)) {  // if across the center when rising (+-3data used to eliminate noize)
         pFine = (float)(swingCenter - sum3(i)) / ((swingCenter - sum3(i)) + (sum3(i + 1) - swingCenter) );  // fine cross point calc.
         if (a0Detected == false) {               // If 1-st cross
@@ -548,16 +547,16 @@ void freqDuty() {                               // Detect frequency and duty cyc
           p1Count++;
         }
         lastPosiEdge = i + pFine;                // Record location for Pw calcration
-        posiSerch = false;
+        posiSearch = false;
       }
-    } else {   // nega slope search (duration saerch)
+    } else {   // Negative slope search (duration saerch)
       if ((sum3(i) >= swingCenter) && (sum3(i + 1) < swingCenter)) {  // if across the center when falling (+-3data used to eliminate noize)
         pFine = (float)(sum3(i) - swingCenter) / ((sum3(i) - swingCenter) + (swingCenter - sum3(i + 1)) );
         if (a0Detected == true) {
-          p2 = p2 + (i + pFine - lastPosiEdge);  // calucurate pulse width and accumurate it
+          p2 = p2 + (i + pFine - lastPosiEdge);  // calculate pulse width and accumurate it
           p2Count++;
         }
-        posiSerch = true;
+        posiSearch = true;
       }
     }
   }
@@ -696,7 +695,7 @@ void dispInf() {                          // Display of various information
   oled.print(chrBuff);                       // display the value
 #endif
 
-// Sisplay frequency, duty % or trigger missed.
+// Display frequency, duty % or trigger missed.
 #ifdef DISPLAY_FREQUENCY  
   if (trigSync == false) {                   // If trigger point can't found
     oled.fillRect(FREQ_X + 1, FREQ_Y + 2, 24, 8, BLACK);     // black paint 4 character
@@ -719,9 +718,9 @@ void dispInf() {                          // Display of various information
       oled.print(F("kH"));
     }
     #ifdef DISPLAY_DUTY_CYCLE
-      oled.fillRect(FREQ_X + 6, FREQ_Y + 9, 25, 10, BLACK); // erase Freq area (as small as possible)
-      oled.setCursor(FREQ_X + 7, FREQ_Y + 11);              // set location
-      oled.print(waveDuty, 1);                              // display duty (High level ratio) in %
+      oled.fillRect(FREQ_X + 6, FREQ_Y + 9, 25, 10, BLACK); // Erase Freq area (as small as possible).
+      oled.setCursor(FREQ_X + 7, FREQ_Y + 11);              // Set location.
+      oled.print(waveDuty, 1);                              // Sisplay duty (High level ratio) in %.
       oled.print(F("%"));
     #endif
   }
@@ -729,26 +728,26 @@ void dispInf() {                          // Display of various information
 }
 
 #ifdef SIMPLIFIED
-void plotData() {                    // plot wave form on OLED over full screen width
+void plotData() { // Plot wave form on OLED over full screen width.
   long y1, y2;
   for (int x = 0; x <= 98; x++) {
-    y1 = map(waveBuff[x + trigP - 50] + dataOffset, rangeMin, rangeMax, 63, 9); // convert to plot address
-    y1 = constrain(y1, 9, 63);                                     // Crush(Saturate) the protruding part
-    y2 = map(waveBuff[x + trigP - 49] + dataOffset, rangeMin, rangeMax, 63, 9); // to address calculate
-    y2 = constrain(y2, 9, 63);                                     // limit y2 to the range [9...63]
+    y1 = map(waveBuff[x + trigP - 50] + dataOffset, rangeMin, rangeMax, 63, 9); // Convert to plot address
+    y1 = constrain(y1, 9, 63);                                                  // Crush(Saturate) the protruding part
+    y2 = map(waveBuff[x + trigP - 49] + dataOffset, rangeMin, rangeMax, 63, 9); // Convert to plot address
+    y2 = constrain(y2, 9, 63);                                                  // Limit y2 to the range [9...63]
     int xx = map(x, 0, 98, 0, SCREEN_WIDTH - 1);
     oled.drawLine(xx + BEGIN_X + 3, y1, xx + BEGIN_X + 4, y2, WHITE);// connect between point
   }
 }
 #else
-void plotData() {                    // plot wave form on OLED over part of screen
+void plotData() { // Plot wave form on OLED over part of screen.
   long y1, y2;
   for (int x = 0; x <= 98; x++) {
-    y1 = map(waveBuff[x + trigP - 50], rangeMin, rangeMax, 63, 9);// Convert to plot address
+    y1 = map(waveBuff[x + trigP - 50], rangeMin, rangeMax, 63, 9); // Convert to plot address
     y1 = constrain(y1, 9, 63);                                     // Crush(Saturate) the protruding part
-    y2 = map(waveBuff[x + trigP - 49], rangeMin, rangeMax, 63, 9); // to address calucurate
-    y2 = constrain(y2, 9, 63);                                     //
-    oled.drawLine(x + BEGIN_X + 3, y1, x + BEGIN_X + 4, y2, WHITE);// connect between point
+    y2 = map(waveBuff[x + trigP - 49], rangeMin, rangeMax, 63, 9); 
+    y2 = constrain(y2, 9, 63);
+    oled.drawLine(x + BEGIN_X + 3, y1, x + BEGIN_X + 4, y2, WHITE);// Connect between point
   }
 }
 #endif
