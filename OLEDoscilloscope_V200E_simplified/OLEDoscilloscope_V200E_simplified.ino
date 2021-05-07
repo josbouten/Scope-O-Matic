@@ -17,6 +17,12 @@
     April 14. 2021, 
     - added vertical offset levelling menu item.
     - Led will signal when data has been saved to EEPROM via pulsed flashing.
+
+    PMO-RP/JSB V2.2 
+    May 7. 2021, 
+    - storing vertical offset for each range to EEPROM
+    - voltage range menu now wraps around
+
 */
 
 #include <Wire.h>
@@ -32,6 +38,7 @@
 // show by the original v2.0 code by radiopench.
 
 #define SIMPLIFIED
+//#define SHOW_OFFSET
 
 #ifdef SIMPLIFIED
   #define BEGIN_X 0   // Begin position of plot on x-axis
@@ -70,13 +77,15 @@
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);   // device name is oled
 
 // Range name table (those are stored in flash memory)
+#define VRANGE_MAX 10
 const char vRangeName[10][5] PROGMEM = {"A50V", "A 5V", " 50V", " 20V", " 10V", "  5V", "  2V", "  1V", "0.5V", "0.2V"}; // Vertical display character (number of characters including \ 0 is required)
 const char * const vstring_table[] PROGMEM = {vRangeName[0], vRangeName[1], vRangeName[2], vRangeName[3], vRangeName[4], vRangeName[5], vRangeName[6], vRangeName[7], vRangeName[8], vRangeName[9]};
 const char hRangeName[10][6] PROGMEM = {"200ms", "100ms", " 50ms", " 20ms", " 10ms", "  5ms", "  2ms", "  1ms", "500us", "200us"};  //  Hrizontal display characters
 const char * const hstring_table[] PROGMEM = {hRangeName[0], hRangeName[1], hRangeName[2], hRangeName[3], hRangeName[4], hRangeName[5], hRangeName[6], hRangeName[7], hRangeName[8], hRangeName[9]};
 const PROGMEM float hRangeValue[] = { 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.5e-3, 0.2e-3}; // horizontal range value in second. ( = 25pix on screen)
 
-int dataOffset;                // Vertical offset for wave form.
+
+int dataOffset[VRANGE_MAX];    // Vertical offset for wave form.
 int waveBuff[REC_LENG];        // Wave form buffer (RAM remaining capacity is barely)
 char chrBuff[8];               // Display string buffer
 char hScale[] = "xxxAs";       // Horizontal scale character
@@ -129,8 +138,8 @@ template <class T> int EEPROM_readAnything(int ee, T& value)
 void setup() {
   pinMode( 2, INPUT_PULLUP);            // Button pussed interrupt (int.0 IRQ)
   pinMode( 8, INPUT_PULLUP);            // Select button
-  pinMode( 9, INPUT_PULLUP);            // Up
-  pinMode(10, INPUT_PULLUP);            // Down
+  pinMode( 9, INPUT_PULLUP);            // Down
+  pinMode(10, INPUT_PULLUP);            // Up
   pinMode(11, INPUT_PULLUP);            // Hold
   pinMode(12, INPUT);                   // 1/10 attenuator(Off=High-Z, Enable=Output Low)
   pinMode(13, OUTPUT);                  // LED
@@ -581,7 +590,7 @@ void startScreen() {                      // Start up screen
   oled.println(F("PMO-RP/JSB"));          // Title(Poor Man's Osilloscope, RadioPench 1)  
 #ifdef SIMPLIFIED  
   oled.setCursor(9, 35);
-  oled.println(F("    v2.1s"));           // simplified version No.
+  oled.println(F("    v2.2s"));           // simplified version No.
 #else
   oled.setCursor(10, 35);
   oled.println(F("    v2.0")) ;           // 'original' version No.
@@ -634,8 +643,11 @@ void dispInf() {                          // Display of various information
 
   // Show calibration menu item.
   oled.setCursor(100, 0);                  // Top right
-  oled.print("Zero");
-  //oled.print(dataOffset);
+  #ifndef SHOW_OFFSET
+    oled.print("Zero");
+  #else
+    oled.print(dataOffset[vRange]);
+  #endif
   if (scopeP == 3) {
     oled.drawFastHLine( 98, 7, 28, WHITE); // Display zero menu item mark.
     oled.drawFastVLine( 98, 5,  2, WHITE);
@@ -731,9 +743,9 @@ void dispInf() {                          // Display of various information
 void plotData() { // Plot wave form on OLED over full screen width.
   long y1, y2;
   for (int x = 0; x <= 98; x++) {
-    y1 = map(waveBuff[x + trigP - 50] + dataOffset, rangeMin, rangeMax, 63, 9); // Convert to plot address
+    y1 = map(waveBuff[x + trigP - 50] + dataOffset[vRange], rangeMin, rangeMax, 63, 9); // Convert to plot address
     y1 = constrain(y1, 9, 63);                                                  // Crush(Saturate) the protruding part
-    y2 = map(waveBuff[x + trigP - 49] + dataOffset, rangeMin, rangeMax, 63, 9); // Convert to plot address
+    y2 = map(waveBuff[x + trigP - 49] + dataOffset[vRange], rangeMin, rangeMax, 63, 9); // Convert to plot address
     y2 = constrain(y2, 9, 63);                                                  // Limit y2 to the range [9...63]
     int xx = map(x, 0, 98, 0, SCREEN_WIDTH - 1);
     oled.drawLine(xx + BEGIN_X + 3, y1, xx + BEGIN_X + 4, y2, WHITE);// connect between point
@@ -771,7 +783,9 @@ void saveEEPROM() {                    // Save the setting value in EEPROM after
       EEPROM.write(1, hRange);
       EEPROM.write(2, trigD);
       EEPROM.write(3, scopeP);
-      EEPROM_writeAnything(4, dataOffset);
+      for (int i = 0; i < VRANGE_MAX; i++) {
+        EEPROM_writeAnything(4 + i * sizeof(int), dataOffset[i]);
+      }
       flashLed();                      // Signal to user that data was written to EEPROM.
     }
   }
@@ -797,10 +811,12 @@ void loadEEPROM() {                    // Read setting values from EEPROM (abnor
   if ((scopeP < 0) || (scopeP > 3)) {       // if out of 0-3
     scopeP = 0;                             // default value
   }
-  
-  EEPROM_readAnything(4, dataOffset);                  // Data display offset value.
-  if ((dataOffset < -750) || (dataOffset > 750)) {       // Default value is 0.
-    dataOffset = 0;
+
+  for (int i = 0; i < VRANGE_MAX; i++) {
+    EEPROM_readAnything(4 + i * sizeof(int), dataOffset[i]); // Data display offset value.
+    if ((dataOffset[i] < -800) || (dataOffset[i] > 250)) {   // Default value is 0.
+      dataOffset[i] = 0;
+    }
   }
 }
 
@@ -878,7 +894,7 @@ void auxFunctions() {                       // voltage meter function
   }
 }
 
-void pin2IRQ() {                   // Pin2(int.0) interrupr handler
+void pin2IRQ() {                   // Pin2(int.0) interrupt handler
   // Pin8,9,10,11 buttons are bundled with diodes and connected to Pin2.
   // So, if any button is pressed, this routine will start.
   int x;                           // Port information holding variable
@@ -890,16 +906,16 @@ void pin2IRQ() {                   // Pin2(int.0) interrupr handler
   }
   if ((x & 0x01) == 0) {           // if select button(Pin8) pushed,
     scopeP++;                      // forward scope position
-    if (scopeP > SCOPE_P_UPPER) {              // if upper limit
+    if (scopeP > SCOPE_P_UPPER) {  // if upper limit
       scopeP = 0;                  // move to start position
     }
   }
 
-  if ((x & 0x02) == 0) {           // if UP button(Pin9) pushed, and
+  if ((x & 0x02) == 0) {           // if UP button pushed, and
     if (scopeP == 0) {             // scoped vertical range
       vRange++;                    // V-range up !
       if (vRange > 9) {            // if upper limit
-        vRange = 9;                // stay as is
+        vRange = 0;                // start at beginning of range.
       }
     }
     if (scopeP == 1) {             // if scoped horizontal range
@@ -912,28 +928,28 @@ void pin2IRQ() {                   // Pin2(int.0) interrupr handler
       trigD = 0;                   // set trigger porality to +
     }
     if (scopeP == 3) {             // If menu item calibration chosen
-      dataOffset -= 10;            // then decrement the offset.
+      dataOffset[vRange] -= 10;            // then decrement the offset.
     }
   }
 
-  if ((x & 0x04) == 0) {           // if DOWN button(Pin10) pushed, and
+  if ((x & 0x04) == 0) {           // if DOWN button pushed, and
     if (scopeP == 0) {             // scoped vertical range
       vRange--;                    // V-range DOWN
       if (vRange < 0) {            // if bottom
-        vRange = 0;                // stay as is
+        vRange = 9;                // stay as is
       }
     }
-    if (scopeP == 1) {             // if scoped hrizontal range
+    if (scopeP == 1) {             // if scoped horizontal range
       hRange--;                    // H-range DOWN
       if (hRange < 0) {            // if bottom
         hRange = 0;                // stay as is
       }
     }
-    if (scopeP == 2) {             // if scoped trigger porality
+    if (scopeP == 2) {             // if scoped trigger polarity
       trigD = 1;                   // set trigger polarity to -
     }
     if (scopeP == 3) {             // If menu item calibration chosen
-      dataOffset += 10;            // then increment the offset
+      dataOffset[vRange] += 10;    // then increment the offset
     }
   }
 
